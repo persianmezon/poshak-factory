@@ -2,9 +2,10 @@ const { defineConfig } = require('@vue/cli-service')
 
 module.exports = defineConfig({
   transpileDependencies: true,
-  publicPath: '/mahdi5989/',
 
-  // فعال‌سازی هش برای فایل‌های خروجی (اجباری برای جلوگیری از conflict)
+  // مسیر انتشار (بسته به محیط)
+  publicPath: process.env.VUE_APP_BASE_PATH || '/',
+
   filenameHashing: true,
 
   configureWebpack: {
@@ -12,7 +13,7 @@ module.exports = defineConfig({
       filename: 'js/[name].[contenthash].js',
       chunkFilename: 'js/[name].[contenthash].js'
     }
-  },
-
+  }
 })
+
 
