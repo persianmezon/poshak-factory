@@ -2,17 +2,17 @@ const { defineConfig } = require('@vue/cli-service')
 
 module.exports = defineConfig({
   transpileDependencies: true,
-  publicPath: '/mahdi4354/',
-  pwa: {
-    name: 'پوشاک فکتوری',
-    themeColor: '#2563eb',
-    manifestOptions: {
-      short_name: 'Factory',
-      start_url: '.',
-      display: 'standalone',
-      background_color: '#ffffff'
-    }
-  }
-})
+  publicPath: '/mahdi5989/',
 
+  // فعال‌سازی هش برای فایل‌های خروجی (اجباری برای جلوگیری از conflict)
+  filenameHashing: true,
+
+  configureWebpack: {
+    output: {
+      filename: 'js/[name].[contenthash].js',
+      chunkFilename: 'js/[name].[contenthash].js'
+    }
+  },
+
+})
 

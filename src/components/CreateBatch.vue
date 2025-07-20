@@ -19,6 +19,11 @@
   <option v-for="worker in workers" :key="worker">{{ worker }}</option>
 </select>
 
+<select v-model="form.workerName" class="border p-2 rounded w-full">
+  <option value="">انتخاب کارگر</option>
+  <option v-for="name in workersList" :key="name" :value="name">{{ name }}</option>
+</select>
+
   <div>
     <label class="block">نام قطعه:</label>
     <input v-model="partName" class="input" required />
@@ -79,11 +84,16 @@ export default {
       fabricType: '',
       metersUsed: null,
       editingId: null,
+      workersList: [],
       editMode: false,
        workers: [],
       successMessage: ''
     }
   },
+  async mounted() {
+  const snapshot = await getDocs(collection(db, 'workers'))
+  this.workersList = snapshot.docs.map(doc => doc.data().name)
+},
 async created() {
   const snap = await getDocs(collection(db, 'workers'))
   this.workers = snap.docs.map(doc => doc.data().name)

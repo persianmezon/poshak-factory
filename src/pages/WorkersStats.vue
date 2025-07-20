@@ -19,33 +19,41 @@
 </table>
 
   <div class="flex gap-4 mb-4">
-  <div>
-    <label>ماه اول:</label>
-    <select v-model="selectedMonth1" class="border rounded p-1">
-      <option disabled value="">انتخاب کنید</option>
-      <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
-    </select>
-  </div>
+    <div>
+      <label>ماه اول:</label>
+      <select v-model="selectedMonth1" class="border rounded p-1">
+        <option disabled value="">انتخاب کنید</option>
+        <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
+      </select>
+    </div>
 
-  <Bar
-  :chart-data="{
-    labels: comparisonData.labels,
-    datasets: [
-      {
-        label: 'ماه اول',
-        backgroundColor: '#4F46E5',
-        data: comparisonData.dataset1
-      },
-      {
-        label: 'ماه دوم',
-        backgroundColor: '#F59E0B',
-        data: comparisonData.dataset2
-      }
-    ]
-  }"
-  :options="{ responsive: true, maintainAspectRatio: false }"
-  style="height: 300px"
-/>
+    <div>
+      <label>ماه دوم:</label>
+      <select v-model="selectedMonth2" class="border rounded p-1">
+        <option disabled value="">انتخاب کنید</option>
+        <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
+      </select>
+    </div>
+
+    <!-- ✅ نمودار مقایسه فقط در صورت آماده بودن داده -->
+    <BarChart
+      v-if="comparisonData && comparisonData.labels && comparisonData.labels.length > 0"
+      :chart-data="{
+        labels: comparisonData.labels,
+        datasets: [
+          { label: 'ماه اول', backgroundColor: '#4F46E5', data: comparisonData.dataset1 },
+          { label: 'ماه دوم', backgroundColor: '#F59E0B', data: comparisonData.dataset2 }
+        ]
+      }"
+      :options="{ responsive: true, maintainAspectRatio: false }"
+      style="height: 300px"
+    />
+
+   <!-- 📌 اگر داده‌ای نیست -->
+    <div v-else class="text-sm text-gray-500 mt-2">
+      لطفاً دو ماه را برای مقایسه انتخاب کنید.
+    </div>
+  
 
 <div class="flex gap-2 mt-2">
   <button @click="selectAllWorkers" class="bg-blue-500 text-white px-3 py-1 rounded">
@@ -201,7 +209,10 @@
 
       <h3 class="text-lg font-semibold mt-6 mb-2">🎯 سهم نسبی خیاط‌ها</h3>
 <div style="height: 300px;">
-  <PieChart :chart-data="pieChartData" />
+  <PieChart
+  v-if="pieChartData && pieChartData.labels && pieChartData.labels.length"
+  :chart-data="pieChartData"
+/>
 </div>
 
 <div class="mb-4">
@@ -250,13 +261,17 @@
       <!-- ✅ نمودار -->
       <BarChart
   v-if="filteredChartData && filteredChartData.labels && filteredChartData.labels.length"
-  :chart-data="filteredChartData"
+  :chart-data="filteredChartData || { labels: [], datasets: [] }"
 />
 
       <!-- ✅ نمودار دایره‌ای (Pie) -->
 <h3 class="text-lg font-semibold mt-6 mb-2">🎯 سهم نسبی خیاط‌ها</h3>
 <div style="height: 300px;">
-  <PieChart :chart-data="pieChartData" />
+  <PieChart
+  v-if="pieChartData && pieChartData.labels && pieChartData.labels.length"
+  :chart-data="pieChartData"
+/>
+
 </div>
 <!-- 🔢 نمایش درصد سهم هر خیاط -->
 <ul class="mt-4 text-sm space-y-1">
@@ -269,7 +284,11 @@
   </div>
 
   <h3 class="text-lg font-bold my-4">📈 روند تغییرات ماهانه هر خیاط</h3>
-<LineChart :chart-data="trendChartData" style="height: 400px;" />
+<LineChart
+  v-if="trendChartData && trendChartData.labels && trendChartData.labels.length"
+  :chart-data="trendChartData"
+  style="height: 400px;"
+/>
 </AppLayout>
 </template>
 
@@ -306,14 +325,12 @@ ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
 
 export default {
   name: 'WorkersStats',
-
-components: {
-  AppLayout,
-  BarChart: Bar,
-  LineChart: Line,
-  PieChart: Pie
-}
-,
+  components: {
+    AppLayout,
+    BarChart: Bar,
+    LineChart: Line,
+    PieChart: Pie
+  },
 
   data() {
     return {
@@ -532,6 +549,14 @@ trendChartData() {
 }
 ,
 comparisonData() {
+  if (!this.selectedMonth1 || !this.selectedMonth2) {
+    return {
+      labels: [],
+      dataset1: [],
+      dataset2: []
+    }
+  }
+
   const getSummary = (month) => {
     const summary = {}
     this.stats.forEach(item => {
@@ -545,7 +570,6 @@ comparisonData() {
 
   const m1 = getSummary(this.selectedMonth1)
   const m2 = getSummary(this.selectedMonth2)
-
   const allWorkers = Array.from(new Set([...Object.keys(m1), ...Object.keys(m2)]))
 
   return {

@@ -1,58 +1,53 @@
-<!-- eslint-disable -->
-<template>
-  <Bar :data="chartData" :options="chartOptions" />
-</template>
-
-<script setup>
-/* eslint-disable */
-
+<script>
 import { Bar } from 'vue-chartjs'
 import {
   Chart as ChartJS,
   Title, Tooltip, Legend,
   BarElement, CategoryScale, LinearScale
 } from 'chart.js'
-import { ref, watch } from 'vue'
 
-// ثبت ماژول‌های ChartJS
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
 
-// تعریف props به‌صورت معتبر
-const props = defineProps({
-  reportData: {
-    type: Object,
-    default: () => ({})
-  }
-})
-
-// داده‌های نمودار
-const chartData = ref({
-  labels: [],
-  datasets: []
-})
-
-// تنظیمات نمودار
-const chartOptions = {
-  responsive: true,
-  plugins: {
-    legend: { display: false }
-  }
-}
-
-// واکنش به تغییر reportData
-watch(
-  () => props.reportData,
-  (newData) => {
-    chartData.value = {
-      labels: Object.keys(newData || {}),
-      datasets: [{
-        label: 'تعداد قطعات',
-        data: Object.values(newData || {}),
-        backgroundColor: '#3b82f6'
-      }]
+export default {
+  name: 'ReportBarChart',
+  components: { Bar },
+  props: {
+    reportData: {
+      type: Object,
+      default: () => ({})
     }
   },
-  { immediate: true }
-)
+  data() {
+    return {
+      chartOptions: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    }
+  },
+  computed: {
+    chartData() {
+      if (!this.reportData || Object.keys(this.reportData).length === 0) return null
+      return {
+        labels: Object.keys(this.reportData),
+        datasets: [{
+          label: 'تعداد قطعات',
+          data: Object.values(this.reportData),
+          backgroundColor: '#3b82f6'
+        }]
+      }
+    }
+  }
+}
 </script>
 
+<template>
+  <div v-if="chartData">
+    <Bar :data="chartData" :options="chartOptions" />
+  </div>
+  <div v-else class="text-center text-sm text-gray-500 py-4">
+    در حال آماده‌سازی نمودار...
+  </div>
+</template>

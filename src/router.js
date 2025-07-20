@@ -4,9 +4,10 @@ import { auth } from '@/firebase'
 import Login from '@/pages/Login.vue'
 import MainLayout from '@/layouts/MainLayout.vue'
 
-import WorkersStats from '@/pages/WorkersStats.vue'
-import SupervisorPanel from '@/components/SupervisorPanel.vue'
-import UsersManagement from '@/pages/UsersManagement.vue'
+const WorkersStats = () => import('@/pages/WorkersStats.vue')
+const SupervisorPanel = () => import('@/components/SupervisorPanel.vue')
+const UsersManagement = () => import('@/pages/UsersManagement.vue')
+const WorkersManagement = () => import('@/pages/WorkersManagement.vue')
 
 const routes = [
   {
@@ -30,8 +31,8 @@ const routes = [
       { path: '/products', component: () => import('@/pages/ProductGallery.vue') },
       { path: '/deleted-batches', name: 'DeletedBatches', component: () => import('@/pages/reports/DeletedBatches.vue') },
       { path: '/settings', name: 'FactorySettings', component: () => import('@/pages/FactorySettings.vue') },
-      { path: '/workers-management', component: () => import('@/pages/WorkersManagement.vue') },
       { path: '/pdf-archive', name: 'PdfArchive', component: () => import('@/pages/reports/PdfArchive.vue') },
+      {path: '/workers-management',component: WorkersManagement,meta: { onlyAdmin: true }},
       {path: '/generate-qrcode',component: () => import('@/pages/GenerateQRCode.vue'),meta: { requiresRole: 'admin' }},
       {path: '/qrcode-scanner',component: () => import('@/pages/QRCodeScanner.vue')},
     ]
