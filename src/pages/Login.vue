@@ -10,15 +10,23 @@
 
     <!-- متن خوشامدگویی -->
     <h1 class="text-3xl font-semibold text-teal-700 mb-1">Welcome</h1>
-    <p class="text-teal-600 mb-6">Log & Create account</p>
+    <p class="text-teal-600 mb-2">Login using your credentials</p>
+
+    <!-- دکمه تغییر روش ورود -->
+    <button
+      @click="useFirebase = !useFirebase"
+      class="mb-4 text-sm text-blue-700 underline"
+    >
+      Switch to {{ useFirebase ? 'Local Login' : 'Firebase Login' }}
+    </button>
 
     <!-- فرم ورود -->
     <form @submit.prevent="handleLogin" class="w-full max-w-sm space-y-4">
       <div>
-        <label class="text-sm text-blue-900 block mb-1">Username</label>
+        <label class="text-sm text-blue-900 block mb-1">Email</label>
         <input
-          v-model="username"
-          placeholder="Enter your username"
+          v-model="email"
+          placeholder="Enter your email"
           class="w-full border border-blue-800 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
       </div>
@@ -37,7 +45,7 @@
         type="submit"
         class="w-full bg-blue-800 text-white py-2 rounded hover:bg-blue-900 transition"
       >
-        Log In
+        {{ useFirebase ? 'Log In with Firebase' : 'Log In Locally' }}
       </button>
     </form>
 
@@ -47,34 +55,53 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '@/firebase'
-import { useRouter } from 'vue-router'
+import { localUsers } from '@/utils/localUsers' // فایل کاربران زاپاس
 
 const router = useRouter()
-const username = ref('')
+const email = ref('')
 const password = ref('')
+const useFirebase = ref(true)
+
+const tryLocalLogin = (emailVal, passVal) => {
+  const user = localUsers.find(
+    (u) => u.email === emailVal && u.password === passVal
+  )
+  if (user) {
+    localStorage.setItem('userRole', user.role)
+    localStorage.setItem('userEmail', user.email)
+    localStorage.setItem('isLocalLogin', 'true')
+    return true
+  }
+  return false
+}
 
 const handleLogin = async () => {
-  const email = username.value
-  const pass = password.value
-
-  // 👇 ورود تستی برای نقش admin
-  if (email === 'admin@factory.com' && pass === '123456') {
-    localStorage.setItem('userRole', 'admin')
-    localStorage.setItem('userEmail', email)
-    router.push('/dashboard')
+  if (!email.value || !password.value) {
+    alert('لطفاً ایمیل و رمز عبور را وارد کنید.')
     return
   }
 
-  // 🔐 ورود واقعی با Firebase Auth
-  try {
-    await signInWithEmailAndPassword(auth, email, pass)
-    // می‌تونی بعداً role رو از Firestore بگیری، اما فعلاً برای ورود معمولی فقط انتقال بده
-    router.push('/dashboard')
-  } catch (error) {
-    alert('❌ ورود ناموفق بود. لطفاً اطلاعات را بررسی کنید.')
+  if (useFirebase.value) {
+    try {
+      await signInWithEmailAndPassword(auth, email.value, password.value)
+      // اینجا می‌تونی نقش رو از Firestore بگیری، ولی فعلاً فرض می‌گیریم نقش پیش‌فرضه
+      localStorage.setItem('userRole', 'admin') // یا مقدار واقعی از دیتابیس
+      localStorage.setItem('userEmail', email.value)
+      localStorage.setItem('isLocalLogin', 'false')
+      router.push('/dashboard')
+    } catch (error) {
+      alert('❌ ورود با Firebase ناموفق بود.')
+    }
+  } else {
+    const success = tryLocalLogin(email.value, password.value)
+    if (success) {
+      router.push('/dashboard')
+    } else {
+      alert('❌ ورود محلی ناموفق بود.')
+    }
   }
 }
-
 </script>
