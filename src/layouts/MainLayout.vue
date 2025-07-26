@@ -8,6 +8,12 @@
       <!-- سایدبار دسکتاپ -->
       <Sidebar v-if="route.path !== '/login'" class="hidden sm:block" />
 
+      <div
+  class="fixed inset-0 bg-black bg-opacity-40 z-40 md:hidden"
+  v-if="isSidebarOpen"
+  @click="isSidebarOpen = false"
+></div>
+
       <!-- سایدبار موبایل (شناور) -->
       <transition name="fade">
         <div

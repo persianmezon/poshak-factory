@@ -3,7 +3,7 @@
     <!-- 🔹 هدر با رنگ و نام کارخانه از store -->
     <div :style="{ backgroundColor: factorySettings.themeColor || '#f3f4f6' }" class="py-2 px-4 shadow-sm">
       <h1 class="text-xl font-bold text-white">
-        {{ factorySettings.name || 'پوشاک فکتوری' }}
+        {{ factorySettings.name || 'ProdMaster' }}
       </h1>
     </div>
     <!-- 🔹 نوار منو -->

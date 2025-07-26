@@ -9,25 +9,28 @@ import { auth } from '@/firebase'
 import DatePicker from 'vue3-persian-datetime-picker'
 import './registerServiceWorker'
 
-let app;
+let appInstance = null
 
 onAuthStateChanged(auth, () => {
-  if (!app) {
-    app = createApp(App)
-    app.use(router)
-    app.use(VueLazyload, {
-      loading: '', // می‌تونی آدرس عکس لودینگ بذاری
-      error: '',   // می‌تونی آدرس عکس خطا بذاری
+  if (!appInstance) {
+    appInstance = createApp(App)
+    
+    appInstance.use(router)
+    appInstance.use(VueLazyload, {
+      loading: '', // آدرس عکس لودینگ در صورت نیاز
+      error: ''    // آدرس عکس خطا در صورت نیاز
     })
-    app.component('DatePicker', DatePicker)
-    app.mount('#app')
+    appInstance.component('DatePicker', DatePicker)
+
+    appInstance.mount('#app')
   }
 })
 
+// حذف سرویس‌ورکرهای قبلی
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(registrations) {
-    for (let registration of registrations) {
-      registration.unregister();
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    for (let reg of registrations) {
+      reg.unregister()
     }
-  });
+  })
 }

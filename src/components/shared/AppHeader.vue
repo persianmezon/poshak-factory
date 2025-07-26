@@ -4,9 +4,9 @@
     <!-- پروفایل و خروج + دکمه سایدبار موبایل -->
     <div class="order-1 flex items-center gap-4">
       <!-- دکمه منو برای موبایل -->
-      <button class="sm:hidden text-gray-600" @click="$emit('toggle-sidebar')">
-        ☰
-      </button>
+<button class="sm:hidden text-gray-600" @click="isMobileMenuOpen = true">
+  ☰
+</button>
 
       <button @click="logout" class="text-red-500 hover:text-red-700">
         <PowerIcon class="w-6 h-6" />
@@ -61,20 +61,24 @@
       </button>
     </div>
   </transition>
+  <MobileMenu :isOpen="isMobileMenuOpen" @close="isMobileMenuOpen = false" />
 </template>
 
 <script>
 import { ref } from 'vue'
 import { PowerIcon, SearchIcon } from 'lucide-vue-next'
+import MobileMenu from '@/components/shared/MobileMenu.vue'
 
 export default {
   name: 'AppHeader',
   components: {
     PowerIcon,
+    MobileMenu,
     SearchIcon
   },
   setup() {
     const searchQuery = ref('')
+    const isMobileMenuOpen = ref(false)
     const userEmail = localStorage.getItem('userEmail') || 'کاربر'
     const userPhoto = localStorage.getItem('avatarUrl') || 'https://i.pravatar.cc/100'
     const isMobileSearchOpen = ref(false)
@@ -98,6 +102,7 @@ export default {
       userEmail,
       userPhoto,
       logout,
+      isMobileMenuOpen,
       toggleMobileSearch,
       isMobileSearchOpen
     }

@@ -24,11 +24,8 @@
 <script>
 import { db } from '../firebase'
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore'
-import { QrcodeStream } from 'vue-qrcode-reader'
-import AppLayout from '@/components/AppLayout.vue'
 
 export default {
-  components: { AppLayout, QrcodeStream },
   data() {
     return {
       scannedCode: '',

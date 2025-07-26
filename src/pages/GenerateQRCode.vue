@@ -97,6 +97,29 @@ generateQR() {
   }
   this.qrData = content
   this.qrLabel = label
+  // ارسال به سرور
+fetch('https://app.paryamezon.ir/api/create-qrcode.php', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    section: this.mainSection,
+    part: this.mainSection === 'final' ? null : (this.mainSection === 'cut' ? this.cutPart : this.sewingPart),
+    code: this.mainSection === 'final' ? this.finalCode : this.code,
+    count: this.count
+  })
+})
+.then(res => res.json())
+.then(result => {
+  if (result.success) {
+    alert('✅ دسته با موفقیت ثبت شد.')
+  } else {
+    alert('❌ خطا: ' + result.message)
+  }
+})
+.catch(err => {
+  console.error('❌ خطا در ارسال به سرور:', err)
+  alert('⚠️ خطا در اتصال به سرور')
+})
 }
 ,
 printQRCode() {

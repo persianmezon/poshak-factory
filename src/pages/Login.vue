@@ -12,13 +12,6 @@
     <h1 class="text-3xl font-semibold text-teal-700 mb-1">Welcome</h1>
     <p class="text-teal-600 mb-2">Login using your credentials</p>
 
-    <!-- دکمه تغییر روش ورود -->
-    <button
-      @click="useFirebase = !useFirebase"
-      class="mb-4 text-sm text-blue-700 underline"
-    >
-      Switch to {{ useFirebase ? 'Local Login' : 'Firebase Login' }}
-    </button>
 
     <!-- فرم ورود -->
     <form @submit.prevent="handleLogin" class="w-full max-w-sm space-y-4">
@@ -45,7 +38,7 @@
         type="submit"
         class="w-full bg-blue-800 text-white py-2 rounded hover:bg-blue-900 transition"
       >
-        {{ useFirebase ? 'Log In with Firebase' : 'Log In Locally' }}
+        {{'Log In' }}
       </button>
     </form>
 
@@ -56,52 +49,50 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { signInWithEmailAndPassword } from 'firebase/auth'
+import { signInWithCustomToken } from 'firebase/auth'
 import { auth } from '@/firebase'
-import { localUsers } from '@/utils/localUsers' // فایل کاربران زاپاس
+
 
 const router = useRouter()
 const email = ref('')
 const password = ref('')
-const useFirebase = ref(true)
 
-const tryLocalLogin = (emailVal, passVal) => {
-  const user = localUsers.find(
-    (u) => u.email === emailVal && u.password === passVal
-  )
-  if (user) {
-    localStorage.setItem('userRole', user.role)
-    localStorage.setItem('userEmail', user.email)
-    localStorage.setItem('isLocalLogin', 'true')
-    return true
-  }
-  return false
-}
 
 const handleLogin = async () => {
   if (!email.value || !password.value) {
     alert('لطفاً ایمیل و رمز عبور را وارد کنید.')
     return
   }
+  // ورود با Firebase از طریق PHP
+  try {
+    const response = await fetch('https://app.paryamezon.ir/api/login.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email.value,
+        password: password.value
+      })
+    })
 
-  if (useFirebase.value) {
-    try {
-      await signInWithEmailAndPassword(auth, email.value, password.value)
-      // اینجا می‌تونی نقش رو از Firestore بگیری، ولی فعلاً فرض می‌گیریم نقش پیش‌فرضه
-      localStorage.setItem('userRole', 'admin') // یا مقدار واقعی از دیتابیس
-      localStorage.setItem('userEmail', email.value)
+    const result = await response.json()
+    console.log('✅ result from PHP:', result)
+
+    if (result.success) {
+      localStorage.setItem('userRole', result.role)
+      localStorage.setItem('userEmail', result.email)
+      localStorage.setItem('uid', result.uid)
       localStorage.setItem('isLocalLogin', 'false')
-      router.push('/dashboard')
-    } catch (error) {
-      alert('❌ ورود با Firebase ناموفق بود.')
-    }
-  } else {
-    const success = tryLocalLogin(email.value, password.value)
-    if (success) {
+
+      await signInWithCustomToken(auth, result.token)
+
       router.push('/dashboard')
     } else {
-      alert('❌ ورود محلی ناموفق بود.')
+      alert(result.message || '❌ ورود Firebase ناموفق بود.')
     }
+  } catch (error) {
+    alert('❌ خطا در ارتباط با سرور')
+    console.error(error)
   }
 }
 </script>
+

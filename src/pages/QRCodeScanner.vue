@@ -1,42 +1,54 @@
 <!-- eslint-disable -->
 <template>
   <div class="p-6">
-    <h1 class="text-xl font-bold mb-4">اسکن QRCode</h1>
+    <h1 class="text-center font-bold mb-4">اسکن QRCode</h1>
 
-    <qrcode-stream
-      @decode="onDecode"
-      @init="onInit"
-      class="w-full max-w-md mx-auto"
-    />
+    <div id="qr-reader" style="width: 300px"></div>
+
     <p v-if="cameraError" class="text-red-500 mt-4 text-center">
       دوربین در دسترس نیست. لطفاً با دستگاهی که دوربین دارد وارد شوید.
     </p>
 
+    <!-- انتخاب کارگر -->
+    <div v-if="scannedText" class="mt-4">
+      <label class="block mb-1">👷‍♀️ انتخاب کارگر:</label>
+      <select v-model="selectedWorker" class="border p-2 rounded w-full">
+        <option value="">-- انتخاب کنید --</option>
+        <option
+          v-for="worker in workersList"
+          :key="worker.uid"
+          :value="worker.uid"
+        >
+          {{ worker.name }}
+        </option>
+      </select>
+
+      <button
+        @click="submitScan"
+        :disabled="!selectedWorker"
+        class="mt-2 bg-green-600 text-white px-4 py-2 rounded"
+      >
+        ✅ ثبت نهایی آمار
+      </button>
+    </div>
+
     <!-- انتخاب تاریخ -->
-<div class="my-4 text-center">
-  <label class="mr-2 font-medium">نمایش آمار روز:</label>
-  <input type="date" v-model="selectedDate" class="border p-1 rounded" />
-</div>
+    <div class="my-4 text-center">
+      <label class="mr-2 font-medium">نمایش آمار روز:</label>
+      <input type="date" v-model="selectedDate" class="border p-1 rounded" />
+    </div>
 
-
+    <!-- کد اسکن‌شده -->
     <div v-if="scannedText" class="mt-6 text-center bg-gray-100 p-4 rounded shadow">
       <p class="font-medium text-lg">📦 کد خوانده‌شده:</p>
       <p class="mt-2 text-blue-600 break-words">{{ scannedText }}</p>
     </div>
 
-<div class="flex items-center gap-4 mb-4">
-  <div>
-    <label class="block text-sm font-medium mb-1">از تاریخ:</label>
-    <input type="date" v-model="startDate" class="border p-2 rounded" />
-  </div>
-  <div>
-    <label class="block text-sm font-medium mb-1">تا تاریخ:</label>
-    <input type="date" v-model="endDate" class="border p-2 rounded" />
-  </div>
-</div>
-
     <!-- دکمه دانلود PDF -->
-    <button @click="downloadPDF" class="bg-purple-600 text-white px-4 py-2 rounded mb-4">
+    <button
+      @click="downloadPDF"
+      class="bg-purple-600 hover:bg-purple-700 transition text-white px-6 py-2 rounded shadow mb-4"
+    >
       📥 دانلود PDF گزارش
     </button>
 
@@ -47,29 +59,34 @@
       class="border rounded p-2 w-full mb-4"
     />
 
-    <!-- مجموع -->
     <p class="text-right mb-2 text-sm text-gray-600">🔢 مجموع کل قطعات: {{ totalCount }}</p>
 
-    <!-- جدول آمار فیلترشده -->
-    <table class="w-full table-auto border text-sm">
-      <thead>
-        <tr class="bg-gray-200">
-          <th class="px-2 py-1">بخش</th>
-          <th class="px-2 py-1">قسمت</th>
-          <th class="px-2 py-1">کد</th>
-          <th class="px-2 py-1">تعداد</th>
-          <th class="px-2 py-1">کاربر</th>
-          <th class="px-2 py-1">تاریخ</th>
+    <!-- جدول آمار -->
+    <table class="w-full text-sm text-right border border-gray-300 shadow-sm rounded overflow-hidden">
+      <thead class="bg-gray-200">
+        <tr>
+          <th class="border px-2 py-2">بخش</th>
+          <th class="border px-2 py-2">قسمت</th>
+          <th class="border px-2 py-2">کد</th>
+          <th class="border px-2 py-2">تعداد</th>
+          <th class="border px-2 py-2">کاربر</th>
+          <th class="border px-2 py-2">تاریخ</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="item in filteredRecords" :key="item.id">
-          <td class="px-2 py-1">{{ item.section }}</td>
-          <td class="px-2 py-1">{{ item.part || '---' }}</td>
-          <td class="px-2 py-1">{{ item.code }}</td>
-          <td class="px-2 py-1">{{ item.count }}</td>
-          <td class="px-2 py-1">{{ item.workerId }}</td>
-          <td class="px-2 py-1">{{ new Date(item.createdAt?.seconds * 1000).toLocaleString('fa-IR') }}</td>
+        <tr
+          v-for="item in filteredRecordsByDate"
+          :key="item.id"
+          class="border odd:bg-white even:bg-gray-50 hover:bg-gray-100 transition"
+        >
+          <td class="border px-2 py-2">{{ item.section }}</td>
+          <td class="border px-2 py-2">{{ item.part || '---' }}</td>
+          <td class="border px-2 py-2">{{ item.code }}</td>
+          <td class="border px-2 py-2">{{ item.count }}</td>
+          <td class="border px-2 py-2">{{ getWorkerName(item.workerId) }}</td>
+          <td class="border px-2 py-2">
+            {{ item.createdAt ? item.createdAt.toLocaleString('fa-IR') : '-' }}
+          </td>
         </tr>
       </tbody>
     </table>
@@ -77,232 +94,203 @@
 </template>
 
 <script>
-import { QrcodeStream } from 'vue-qrcode-reader'
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import autoTable from 'jspdf-autotable'
+import { Html5Qrcode } from "html5-qrcode"
 
 export default {
-  components: { QrcodeStream },
-
   data() {
     return {
       scannedText: '',
       cameraError: false,
-      startDate: '',
-      endDate: '',
-      stats: {
-        totalScans: 0,
-        workersCount: 0,
-        lastScanTime: '---'
-      },
-      scanHistory: [],
+      parsedQR: null,
+      selectedWorker: '',
+      workersList: [],
       records: [],
-      qrScans: [],
       selectedDate: new Date().toISOString().substr(0, 10),
       filterText: ''
     }
   },
 
   mounted() {
-    this.listenToQrStats()
-  },
-computed: {
-  filteredScans() {
-    if (!this.filterText) return this.qrScans
-    const keyword = this.filterText.toLowerCase()
-    return this.qrScans.filter(item =>
-      (item.section || '').toLowerCase().includes(keyword) ||
-      (item.part || '').toLowerCase().includes(keyword) ||
-      (item.code || '').toLowerCase().includes(keyword) ||
-      (item.workerId || '').toLowerCase().includes(keyword)
-    )
-  },
-  totalCount() {
-    return this.filteredScans.reduce((sum, item) => sum + (item.count || 0), 0)
-  },
-computed: {
-  filteredRecords() {
-    return this.records.filter(item => {
-      const createdAt = new Date(item.createdAt?.seconds * 1000)
+    this.fetchWorkersList()
+    this.fetchRecords()
 
-      const fromOk = !this.startDate || createdAt >= new Date(this.startDate)
-      const toOk = !this.endDate || createdAt <= new Date(this.endDate + 'T23:59:59')
-
-      const textMatch =
-        item.section?.includes(this.filterText) ||
-        item.part?.includes(this.filterText) ||
-        item.code?.includes(this.filterText) ||
-        item.workerId?.includes(this.filterText)
-
-      return fromOk && toOk && (!this.filterText || textMatch)
-    })
-  },
-
-  totalCount() {
-    return this.filteredRecords.reduce((sum, item) => sum + (item.count || 0), 0)
-  }
-}
-,
-  filteredRecordsByDate() {
-    return this.records.filter(r => {
-      const recordDate = new Date(r.createdAt.seconds * 1000).toISOString().substr(0, 10)
-      return recordDate === this.selectedDate
-    })
-  }
-}
-,
-  methods: {
-    onDecode(result) {
-      this.scannedText = result
-      this.parseQRAndSave(result)
-    },
-
-    onInit(promise) {
-      promise.catch(error => {
-        this.cameraError = true
-        console.error('دسترسی به دوربین ممکن نیست:', error)
-      })
-    },
-
-    listenToQrStats() {
-      import('@/firebase').then(({ firestore }) => {
-        firestore()
-          .collection('qr_stats')
-          .orderBy('createdAt', 'desc')
-          .onSnapshot(snapshot => {
-            this.qrScans = snapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            }))
-
-            this.records = snapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            }))
-          })
-      })
-    },
-    async saveReportToFirestore() {
-  try {
-    const db = await import('@/firebase')
-    const now = new Date()
-    const report = {
-      createdAt: now,
-      createdBy: localStorage.getItem('uid') || 'ناشناس',
-      dateRange: {
-        from: this.startDate || null,
-        to: this.endDate || null
-      },
-      records: this.filteredRecords,
-      total: this.totalCount
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      this.cameraError = true
+      return
     }
 
-    await db.firestore().collection('qr_reports').add(report)
-    console.log('📦 گزارش در آرشیو ذخیره شد.')
+    const html5QrCode = new Html5Qrcode("qr-reader")
+    const config = { fps: 10, qrbox: 250 }
+
+    html5QrCode.start(
+      { facingMode: "environment" },
+      config,
+      decodedText => {
+        this.scannedText = decodedText
+        this.parseQRAndSave(decodedText)
+
+        setTimeout(() => {
+          html5QrCode.stop().catch(err => console.warn("❌ توقف اسکن:", err))
+        }, 500)
+      }
+    ).catch(err => {
+      this.cameraError = true
+      console.error("خطا در راه‌اندازی دوربین:", err)
+    })
+  },
+
+  computed: {
+    filteredRecords() {
+      const keyword = this.filterText.toLowerCase()
+      return this.records.filter(item =>
+        (item.section || '').toLowerCase().includes(keyword) ||
+        (item.part || '').toLowerCase().includes(keyword) ||
+        (item.code || '').toLowerCase().includes(keyword) ||
+        (item.workerId || '').toLowerCase().includes(keyword)
+      )
+    },
+    filteredRecordsByDate() {
+      return this.filteredRecords.filter(item =>
+        item.createdAt?.toISOString().substr(0, 10) === this.selectedDate
+      )
+    },
+    totalCount() {
+      return this.filteredRecords.reduce((sum, item) => sum + (item.count || 0), 0)
+    }
+  },
+
+  methods: {
+getWorkerName(uid) {
+  const worker = this.workersList.find(w => w.uid === uid)
+  return worker ? worker.name : 'نامشخص'
+}
+
+,
+    async fetchWorkersList() {
+      try {
+        const res = await fetch(`https://app.paryamezon.ir/api/get-workers.php?t=${Date.now()}`)
+        const json = await res.json()
+        if (json.success && Array.isArray(json.workers)) {
+          this.workersList = json.workers
+        }
+      } catch (err) {
+        console.error('❌ خطا در واکشی کارگرها:', err)
+      }
+    },
+
+async fetchRecords() {
+  try {
+    const res = await fetch(`https://app.paryamezon.ir/api/get-scans.php?t=${Date.now()}`)
+    const json = await res.json()
+    if (json.success) {
+      this.records = json.records.map(r => {
+        if (r.createdAt && typeof r.createdAt === 'number') {
+          r.createdAt = new Date(r.createdAt * 1000)
+        }
+        return r
+      })
+    }
   } catch (err) {
-    console.error('❌ خطا در ذخیره گزارش:', err)
+    console.error('❌ خطا در واکشی رکوردها:', err)
   }
 }
 ,
 
     async parseQRAndSave(text) {
-      let data = {}
-
       try {
+        let data = {}
         if (text.includes('برش') || text.includes('دوخت')) {
-          const matches = text.match(/قسمت: (.+?) - کد: (.+?) - تعداد: (\d+)/)
-          if (matches) {
-            data = {
-              section: text.includes('برش') ? 'برش' : 'دوخت',
-              part: matches[1],
-              code: matches[2],
-              count: Number(matches[3])
-            }
-          }
+          const m = text.match(/قسمت: (.+?) - کد: (.+?) - تعداد: (\d+)/)
+          if (m) data = { section: text.includes('برش') ? 'برش' : 'دوخت', part: m[1], code: m[2], count: +m[3] }
         } else if (text.includes('نهایی‌کار')) {
-          const matches = text.match(/کد کار: (.+?) - تعداد: (\d+)/)
-          if (matches) {
-            data = {
-              section: 'نهایی‌کار',
-              code: matches[1],
-              count: Number(matches[2])
-            }
-          }
+          const m = text.match(/کد کار: (.+?) - تعداد: (\d+)/)
+          if (m) data = { section: 'نهایی‌کار', code: m[1], count: +m[2] }
         }
 
         if (Object.keys(data).length > 0) {
-          await this.saveToFirestore(data)
+          this.parsedQR = data
         } else {
-          alert('فرمت QR نامعتبر است')
+          alert('⚠️ فرمت QR نامعتبر است.')
         }
-
       } catch (err) {
-        console.error('خطا در پردازش QR:', err)
+        console.error('❌ خطا در پردازش QR:', err)
         alert('خطا در پردازش QR')
       }
     },
 
-    async saveToFirestore(data) {
-      const userUID = localStorage.getItem('uid') || 'ناشناس'
-      const now = new Date()
+    async submitScan() {
+      if (!this.parsedQR || !this.selectedWorker) return
 
       const record = {
-        workerId: userUID,
-        section: data.section,
-        part: data.part || null,
-        code: data.code,
-        count: data.count,
-        createdAt: now
+        workerId: this.selectedWorker,
+        section: this.parsedQR.section,
+        part: this.parsedQR.part || null,
+        code: this.parsedQR.code,
+        count: this.parsedQR.count
       }
 
       try {
-        const db = await import('@/firebase')
-        await db.firestore().collection('qr_stats').add(record)
-        alert('✅ آمار با موفقیت ثبت شد!')
-
-        this.scanHistory.unshift({
-          time: now.toLocaleTimeString('fa-IR'),
-          code: data.code,
-          count: data.count,
-          worker: userUID
+        const res = await fetch('https://app.paryamezon.ir/api/submit-scan.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(record)
         })
 
-        this.stats.totalScans++
-        this.stats.lastScanTime = now.toLocaleTimeString('fa-IR')
-
-        const uniqueWorkers = new Set(this.scanHistory.map(item => item.worker))
-        this.stats.workersCount = uniqueWorkers.size
-
+        const json = await res.json()
+        if (json.success) {
+          alert('✅ آمار ثبت شد')
+          this.scannedText = ''
+          this.selectedWorker = ''
+          this.parsedQR = null
+          await this.fetchWorkersList()
+        } else {
+          alert(json.message || '❌ خطا در ثبت آمار')
+        }
       } catch (err) {
-        console.error('خطا در ذخیره آمار:', err)
-        alert('❌ خطا در ثبت آمار')
+        console.error('❌ خطا در ثبت آمار:', err)
+        alert('❌ خطا در ارتباط با سرور')
       }
     },
 
     async downloadPDF() {
-      await this.saveReportToFirestore()
-      const doc = new jsPDF()
+      try {
+        const doc = new jsPDF()
+        doc.text('📊 گزارش آماری اسکن QRCode', 14, 15)
+        doc.text(`🗓 تاریخ گزارش: ${this.selectedDate}`, 14, 22)
 
-      const tableColumn = ['تاریخ', 'بخش', 'قسمت', 'کد', 'تعداد', 'کاربر']
-      const tableRows = this.filteredScans.map(item => [
-        new Date(item.createdAt.seconds * 1000).toLocaleString('fa-IR'),
-        item.section || '-',
-        item.part || '-',
-        item.code,
-        item.count,
-        item.workerId
-      ])
+        const rows = this.filteredRecordsByDate.map(item => [
+          item.createdAt ? new Date(item.createdAt).toLocaleString('fa-IR') : '-',
+          item.section || '-', item.part || '-', item.code || '-',
+          item.count || 0, item.workerId || '-'
+        ])
 
-      doc.setFont('helvetica')
-      doc.setFontSize(10)
-      doc.autoTable({
-        head: [tableColumn],
-        body: tableRows,
-        styles: { font: 'helvetica', fontSize: 9 },
-        margin: { top: 20 }
-      })
+        autoTable(doc, {
+          head: [['تاریخ', 'بخش', 'قسمت', 'کد', 'تعداد', 'کاربر']],
+          body: rows,
+          startY: 28
+        })
 
-      doc.save('qr-scans-report.pdf')
+        const pdfBlob = doc.output('blob')
+        const formData = new FormData()
+        formData.append('pdf', pdfBlob, `qr-report-${this.selectedDate}.pdf`)
+
+        const uploadRes = await fetch('https://app.paryamezon.ir/api/save-pdf-report.php', {
+          method: 'POST',
+          body: formData
+        })
+
+        const result = await uploadRes.json()
+        if (result.success) {
+          console.log('✅ گزارش در هاست ذخیره شد:', result.path)
+        }
+
+        doc.save(`qr-report-${this.selectedDate}.pdf`)
+      } catch (err) {
+        console.error('❌ خطا در ساخت PDF:', err)
+        alert('❌ خطا در ساخت PDF')
+      }
     }
   }
 }

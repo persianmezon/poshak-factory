@@ -226,9 +226,14 @@
 <table class="min-w-full bg-white rounded shadow mt-10">
   <thead class="bg-gray-100 text-right">
     <tr>
-      <th class="p-2">👷‍♀️ خیاط</th>
-      <th class="p-2">📦 تعداد دسته</th>
-      <th class="p-2">🧵 مجموع قطعات</th>
+<th class="p-2">👷‍♀️ کارگر</th>
+<th class="p-2">🧩 قطعه</th>
+<th class="p-2">📦 تعداد</th>
+<th class="p-2">🧵 نوع پارچه</th>
+<th class="p-2">🧑‍💼 ثبت‌کننده</th>
+<th class="p-2">📆 تاریخ ثبت</th>
+<th class="p-2">⏰ زمان</th>
+<th class="p-2">عملیات</th>
     </tr>
   </thead>
   <tbody>
@@ -304,7 +309,6 @@
           <td class="p-2">{{ formatDate(batch.timestamp) }}</td>
           <td class="p-2 flex gap-2">
             <button @click="editBatch(batch)" class="px-2 py-1 bg-yellow-400 rounded text-sm">✏️ ویرایش</button>
-            <button @click="deleteBatch(batch.id)" class="px-2 py-1 bg-red-500 text-white rounded text-sm">🗑 حذف</button>
           </td>
           <td class="p-2">
   {{ batch.quantity }}
@@ -334,13 +338,14 @@
 
 <script>
 // eslint-disable-next-line no-unused-vars
-import { collection, onSnapshot, deleteDoc, doc, query, orderBy, addDoc } from 'firebase/firestore'
+//import { collection, onSnapshot, deleteDoc, doc, query, orderBy, addDoc } from 'firebase/firestore'
 import { getStorage, ref as storageRef, uploadBytes } from 'firebase/storage'
-import { db } from '../firebase'
+//import { db } from '../firebase'
 import AppLayout from '@/components/AppLayout.vue'
 import DropChart from '@/components/DropChart.vue'
 import html2pdf from 'html2pdf.js'
 import jsPDF from 'jspdf'
+import axios from 'axios'
 import { vazirmatnFontBase64 } from '@/utils/vazirmatn'
 // eslint-disable-next-line no-unused-vars
 import { Bar } from 'vue-chartjs'
@@ -365,11 +370,40 @@ data() {
     selectedPartName: '',
     selectedFabricType: '',
     searchQuery: '',
+    loading: false,
+    error: null,
     selectedCreator: '',
     sortBy: 'date'
   }
 }
 ,
+mounted() {
+  this.fetchBatchesFromPHP()
+},
+async deleteBatch(id) {
+  if (!confirm('آیا از حذف این دسته مطمئن هستید؟')) return
+
+  try {
+    const res = await fetch('https://app.paryamezon.ir/api/delete-batch.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    })
+
+    const result = await res.json()
+    if (result.success) {
+      alert('✅ دسته با موفقیت حذف شد.')
+      this.fetchBatches()
+    } else {
+      alert('❌ خطا: ' + result.message)
+    }
+  } catch (err) {
+    alert('⚠️ خطا در ارتباط با سرور')
+    console.error(err)
+  }
+}
+,
+
 computed: {
   workerStats() {
   const stats = {}
@@ -506,12 +540,7 @@ dailyBatchStats() {
   }
 },
 
-methods: {
-  goToWorkerStats() {
-  localStorage.setItem('workerStatsData', JSON.stringify(this.workerStats))
-  this.$router.push('/workers-stats')
-}
-,
+
   exportWorkerStatsPDF() {
   const doc = new jsPDF()
   doc.addFileToVFS('Vazirmatn.ttf', vazirmatnFontBase64)
@@ -532,6 +561,11 @@ methods: {
   }
 
   doc.save('worker-stats.pdf')
+}
+,
+editBatch(batch) {
+  localStorage.setItem('editBatch', JSON.stringify(batch))
+  this.$router.push('/create-batch')
 }
 ,
   estimateDropPercent(quantity) {
@@ -588,26 +622,6 @@ exportFilteredSummaryPDF() {
   html2pdf().set(opt).from(table).save()
 }
 ,
-async deleteBatch(id) {
-  const confirmDelete = confirm('⚠️ این عملیات قابل بازگشت نیست. آیا مطمئن هستید؟')
-  if (!confirmDelete) return
-
-  try {
-    await deleteDoc(doc(db, 'batches', id))
-    await addDoc(collection(db, 'deletedBatches'), {
-      batchId: id,
-      deletedAt: new Date(),
-      deletedBy: localStorage.getItem('userRole') || 'unknown'
-    })
-  } catch (error) {
-    console.error('خطا در حذف دسته:', error)
-    alert('حذف با خطا مواجه شد.')
-  }
-}
-,
-  editBatch(batch) {
-    this.$emit('edit-batch', batch)
-  },
   formatDate(timestamp) {
     if (!timestamp) return ''
     const date = new Date(timestamp.seconds * 1000)
@@ -688,6 +702,28 @@ async deleteBatch(id) {
   printWindow.print()
 }
 ,
+async mounted() {
+  await this.fetchBatches()
+},
+methods: {
+  goToWorkerStats() {
+  localStorage.setItem('workerStatsData', JSON.stringify(this.workerStats))
+  this.$router.push('/workers-stats')
+}
+,
+  async fetchBatches() {
+    try {
+      const res = await fetch('https://app.paryamezon.ir/api/get-batches.php')
+      const result = await res.json()
+      if (result.success) {
+        this.batches = result.batches
+      } else {
+        alert('❌ خطا در دریافت دسته‌ها: ' + result.message)
+      }
+    } catch (e) {
+      alert('⚠️ ارتباط با سرور ممکن نیست')
+    }
+  },
 async downloadDashboardSummary() {
   const doc = new jsPDF()
   doc.addFileToVFS('Vazirmatn.ttf', vazirmatnFontBase64)

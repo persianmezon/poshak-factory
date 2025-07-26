@@ -3,6 +3,7 @@ import { auth } from '@/firebase'
 
 import Login from '@/pages/Login.vue'
 import MainLayout from '@/layouts/MainLayout.vue'
+import { onAuthStateChanged } from 'firebase/auth'
 
 const WorkersStats = () => import('@/pages/WorkersStats.vue')
 const SupervisorPanel = () => import('@/components/SupervisorPanel.vue')
@@ -43,30 +44,36 @@ const router = createRouter({
   routes
 })
 
-// ✅ فقط یکبار beforeEach بنویس
 router.beforeEach((to, from, next) => {
-  const currentUser = auth.currentUser
   const role = localStorage.getItem('userRole') || 'unknown'
+  
+  // صبر می‌کنیم تا Firebase کاربر رو شناسایی کنه
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    unsubscribe() // فقط یک بار اجرا بشه
 
-  // اگر ورود لازم است اما کاربر لاگین نکرده
-  if (to.meta.requiresAuth && !currentUser) {
-    return next('/login')
+    if (to.meta.requiresAuth && !user) {
+      return next('/login')
+    }
+
+    checkRoleAccess()
+  })
+
+  function checkRoleAccess() {
+    if (to.meta.onlyAdmin && role !== 'admin') {
+      alert('⛔ فقط ادمین دسترسی دارد.')
+      return next('/dashboard')
+    }
+
+    if (to.meta.roles && !to.meta.roles.includes(role)) {
+      alert('⛔ دسترسی شما به این بخش محدود شده است.')
+      return next('/dashboard')
+    }
+
+    return next()
   }
-
-  // فقط ادمین مجاز است
-  if (to.meta.onlyAdmin && role !== 'admin') {
-    alert('⛔ فقط ادمین دسترسی دارد.')
-    return next('/dashboard')
-  }
-
-  // فقط سرپرست و ادمین مجازند
-  if (to.meta.roles && !to.meta.roles.includes(role)) {
-    alert('⛔ دسترسی شما به این بخش محدود شده است.')
-    return next('/dashboard')
-  }
-
-  next()
 })
+
+
 
 export default router
 

@@ -9,13 +9,12 @@ const firebaseConfig = {
   apiKey: "AIzaSyASe7763aembdzd_hJM2pGOiIF57EBTSpU",
   authDomain: "poshak-factory.firebaseapp.com",
   projectId: "poshak-factory",
-  storageBucket: "poshak-factory.appspot.com", // ✅ اصلاح spelling
+  storageBucket: "poshak-factory.appspot.com",
   messagingSenderId: "1024169748853",
   appId: "1:1024169748853:web:e5eedb7f4ea5e339210b3c",
   measurementId: "G-F4KQG6DZ2C"
 }
 
-// 👇 این خط باید قبل از همه باشه
 const app = initializeApp(firebaseConfig)
 
 const db = getFirestore(app)
