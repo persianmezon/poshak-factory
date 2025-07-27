@@ -198,61 +198,83 @@ async fetchRecords() {
 }
 ,
 
-    async parseQRAndSave(text) {
-      try {
-        let data = {}
-        if (text.includes('برش') || text.includes('دوخت')) {
-          const m = text.match(/قسمت: (.+?) - کد: (.+?) - تعداد: (\d+)/)
-          if (m) data = { section: text.includes('برش') ? 'برش' : 'دوخت', part: m[1], code: m[2], count: +m[3] }
-        } else if (text.includes('نهایی‌کار')) {
-          const m = text.match(/کد کار: (.+?) - تعداد: (\d+)/)
-          if (m) data = { section: 'نهایی‌کار', code: m[1], count: +m[2] }
+async parseQRAndSave(text) {
+  try {
+    let data = {}
+    if (text.includes('برش') || text.includes('دوخت')) {
+      const m = text.match(/قسمت: (.+?) - کد: (.+?) - تعداد: (\d+)/)
+      if (m) {
+        data = {
+          section: text.includes('برش') ? 'خروج از برش' : 'دوخت',
+          part: m[1],
+          code: m[2],
+          count: +m[3]
         }
-
-        if (Object.keys(data).length > 0) {
-          this.parsedQR = data
-        } else {
-          alert('⚠️ فرمت QR نامعتبر است.')
+      }
+    } else if (text.includes('نهایی‌کار')) {
+      const m = text.match(/کد کار: (.+?) - تعداد: (\d+)/)
+      if (m) {
+        data = {
+          section: 'نهایی‌کار',
+          code: m[1],
+          count: +m[2]
         }
-      } catch (err) {
-        console.error('❌ خطا در پردازش QR:', err)
-        alert('خطا در پردازش QR')
       }
-    },
+    }
 
-    async submitScan() {
-      if (!this.parsedQR || !this.selectedWorker) return
+    if (Object.keys(data).length > 0) {
+      this.parsedQR = data
+    } else {
+      alert('⚠️ فرمت QR نامعتبر است.')
+    }
+  } catch (err) {
+    console.error('❌ خطا در پردازش QR:', err)
+    alert('خطا در پردازش QR')
+  }
+}
+,
 
-      const record = {
-        workerId: this.selectedWorker,
-        section: this.parsedQR.section,
-        part: this.parsedQR.part || null,
-        code: this.parsedQR.code,
-        count: this.parsedQR.count
-      }
+async submitScan() {
+  if (!this.parsedQR || !this.selectedWorker) return
 
-      try {
-        const res = await fetch('https://app.paryamezon.ir/api/submit-scan.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(record)
-        })
+  // آماده‌سازی رکورد با توجه به QR اسکن‌شده
+  const record = {
+    workerId: this.selectedWorker,
+    section: this.parsedQR.section,
+    part: this.parsedQR.part || null,
+    code: this.parsedQR.code,
+    count: this.parsedQR.count,
+    createdAt: Math.floor(Date.now() / 1000) // زمان به صورت timestamp
+  }
 
-        const json = await res.json()
-        if (json.success) {
-          alert('✅ آمار ثبت شد')
-          this.scannedText = ''
-          this.selectedWorker = ''
-          this.parsedQR = null
-          await this.fetchWorkersList()
-        } else {
-          alert(json.message || '❌ خطا در ثبت آمار')
-        }
-      } catch (err) {
-        console.error('❌ خطا در ثبت آمار:', err)
-        alert('❌ خطا در ارتباط با سرور')
-      }
-    },
+  // اگر بخش "برش" بود یعنی خروج از انبار → اضافه کردن scanType
+  if (record.section === 'خروج از برش') {
+    record.scanType = 'exit_cut'
+  }
+
+  try {
+    const res = await fetch('https://app.paryamezon.ir/api/submit-scan.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(record)
+    })
+
+    const json = await res.json()
+    if (json.success) {
+      alert('✅ آمار ثبت شد')
+      this.scannedText = ''
+      this.selectedWorker = ''
+      this.parsedQR = null
+      await this.fetchRecords()
+    } else {
+      alert(json.message || '❌ خطا در ثبت آمار')
+    }
+  } catch (err) {
+    console.error('❌ خطا در ثبت آمار:', err)
+    alert('❌ خطا در ارتباط با سرور')
+  }
+}
+,
 
     async downloadPDF() {
       try {

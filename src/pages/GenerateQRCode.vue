@@ -86,8 +86,8 @@ generateQR() {
   let content = ''
   let label = ''
   if (this.mainSection === 'cut') {
-    content = `بخش: برش - قسمت: ${this.cutPart} - کد: ${this.code} - تعداد: ${this.count}`
-    label = `برش - ${this.cutPart} - ${this.code} - تعداد: ${this.count}`
+content = `بخش: خروج از برش - قسمت: ${this.cutPart} - کد: ${this.code} - تعداد: ${this.count}`
+label = `خروج از برش - ${this.cutPart} - ${this.code} - تعداد: ${this.count}`
   } else if (this.mainSection === 'sewing') {
     content = `بخش: دوخت - قسمت: ${this.sewingPart} - کد: ${this.code} - تعداد: ${this.count}`
     label = `دوخت - ${this.sewingPart} - ${this.code} - تعداد: ${this.count}`

@@ -4,6 +4,8 @@ import { auth } from '@/firebase'
 import Login from '@/pages/Login.vue'
 import MainLayout from '@/layouts/MainLayout.vue'
 import { onAuthStateChanged } from 'firebase/auth'
+import CutInventory from '@/pages/CutInventory.vue'
+
 
 const WorkersStats = () => import('@/pages/WorkersStats.vue')
 const SupervisorPanel = () => import('@/components/SupervisorPanel.vue')
@@ -19,7 +21,7 @@ const routes = [
   {
     path: '/',
     component: MainLayout,
-    meta: { requiresAuth: true }, // کل layout نیاز به ورود دارد
+    meta: { requiresAuth: true },
     children: [
       { path: '', redirect: '/dashboard' },
       { path: 'dashboard', name: 'Dashboard', component: () => import('@/pages/Dashboard.vue') },
@@ -35,6 +37,10 @@ const routes = [
       { path: '/pdf-archive', name: 'PdfArchive', component: () => import('@/pages/reports/PdfArchive.vue') },
       {path: '/workers-management',component: WorkersManagement,meta: { onlyAdmin: true }},
       {path: '/generate-qrcode',component: () => import('@/pages/GenerateQRCode.vue'),meta: { requiresRole: 'admin' }},
+      {path: '/cut-inventory',name: 'CutInventory',component: CutInventory,meta: { requiresAuth: true }},
+      {path: '/sewing-inventory',name: 'SewingInventory',component: () => import('@/pages/SewingInventory.vue'),meta: { requiresAuth: true, allowedRoles: ['admin', 'supervisor'] }},
+      {path: '/final-inventory',name: 'FinalInventory',component: () => import('@/pages/FinalInventory.vue')},
+      {path: '/cut-storage',name: 'CutStorage',component: () => import('@/pages/CutStorage.vue'),meta: { requiresAuth: true, roles: ['admin', 'supervisor'] }},
       {path: '/qrcode-scanner',component: () => import('@/pages/QRCodeScanner.vue')},
     ]
   }

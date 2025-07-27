@@ -1,5 +1,3 @@
-// src/firebase.js
-
 import { initializeApp } from "firebase/app"
 import { getFirestore } from "firebase/firestore"
 import { getStorage } from 'firebase/storage'
@@ -19,7 +17,7 @@ const app = initializeApp(firebaseConfig)
 
 const db = getFirestore(app)
 const auth = getAuth(app)
-const storage = getStorage(app) // ✅ اینجا app پاس بده
+const storage = getStorage(app)
 
-export { db, auth, storage }
+export { db, auth, storage, firebaseConfig } // ✅ این خط اضافه شد
 
