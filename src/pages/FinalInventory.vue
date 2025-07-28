@@ -65,9 +65,6 @@
 </template>
 
 <script>
-import { initializeApp } from "firebase/app"
-import { getDatabase, ref, get, child } from "firebase/database"
-import { firebaseConfig } from "@/firebase"
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 
@@ -80,14 +77,16 @@ export default {
       filterText: ''
     }
   },
+
   computed: {
-    filteredRecords() {
-      const keyword = this.filterText.toLowerCase()
-      return this.records.filter(item =>
-        (item.code || '').toLowerCase().includes(keyword) ||
-        this.getWorkerName(item.workerId).toLowerCase().includes(keyword)
-      )
-    },
+filteredRecords() {
+  const keyword = this.filterText.toLowerCase()
+  return this.records.filter(item =>
+    (item.code || '').toLowerCase().includes(keyword) ||
+    this.getWorkerName(item.workerId).toLowerCase().includes(keyword)
+  )
+}
+,
     filteredRecordsByDate() {
       return this.filteredRecords.filter(item =>
         item.createdAt?.toISOString().substr(0, 10) === this.selectedDate
@@ -97,11 +96,13 @@ export default {
       return this.filteredRecordsByDate.reduce((sum, item) => sum + (item.count || 0), 0)
     }
   },
+
   methods: {
     getWorkerName(uid) {
       const w = this.workersList.find(w => w.uid === uid)
       return w ? w.name : 'نامشخص'
     },
+
     async fetchWorkers() {
       try {
         const res = await fetch('https://app.paryamezon.ir/api/get-workers.php?t=' + Date.now())
@@ -113,8 +114,25 @@ export default {
         console.error('❌ خطا در واکشی کارگران:', err)
       }
     },
+
+    async fetchRecords() {
+      try {
+        const res = await fetch('https://app.paryamezon.ir/api/get-final.php?t=' + Date.now())
+        const json = await res.json()
+        if (json.success && Array.isArray(json.records)) {
+          this.records = json.records.map(item => ({
+            ...item,
+            createdAt: item.createdAt ? new Date(item.createdAt * 1000) : null
+          }))
+        }
+      } catch (err) {
+        console.error('❌ خطا در دریافت اطلاعات انبار نهایی‌کار:', err)
+      }
+    },
+
     downloadExcel() {
       const exportData = this.filteredRecordsByDate.map(item => ({
+        'قسمت': item.part || '',
         'کد مانتو': item.code || '',
         'تعداد': item.count || 0,
         'نام کارگر': this.getWorkerName(item.workerId),
@@ -138,28 +156,13 @@ export default {
 
       const today = new Date().toLocaleDateString('fa-IR').replace(/\//g, '-')
       saveAs(blob, `گزارش-نهایی‌کار-${today}.xlsx`)
-    },
-    async fetchRecords() {
-      const app = initializeApp(firebaseConfig)
-      const db = getDatabase(app)
-      try {
-        const snapshot = await get(child(ref(db), 'sewing_to_final'))
-        const data = snapshot.val()
-        if (data) {
-          this.records = Object.entries(data).map(([id, item]) => ({
-            id,
-            ...item,
-            createdAt: item.createdAt ? new Date(item.createdAt * 1000) : null
-          }))
-        }
-      } catch (err) {
-        console.error('❌ خطا در واکشی آمار نهایی‌کار:', err)
-      }
     }
   },
+
   async mounted() {
     await this.fetchWorkers()
     await this.fetchRecords()
   }
 }
 </script>
+

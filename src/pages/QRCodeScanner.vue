@@ -9,28 +9,50 @@
       دوربین در دسترس نیست. لطفاً با دستگاهی که دوربین دارد وارد شوید.
     </p>
 
-    <!-- انتخاب کارگر -->
-    <div v-if="scannedText" class="mt-4">
-      <label class="block mb-1">👷‍♀️ انتخاب کارگر:</label>
-      <select v-model="selectedWorker" class="border p-2 rounded w-full">
-        <option value="">-- انتخاب کنید --</option>
-        <option
-          v-for="worker in workersList"
-          :key="worker.uid"
-          :value="worker.uid"
-        >
-          {{ worker.name }}
-        </option>
-      </select>
-
-      <button
-        @click="submitScan"
-        :disabled="!selectedWorker"
-        class="mt-2 bg-green-600 text-white px-4 py-2 rounded"
+<!-- انتخاب کارگر یا پیام راهنما -->
+<div v-if="scannedText && parsedQR" class="mt-4">
+  <div v-if="parsedQR.section === 'سالن دوخت'">
+    <label class="block mb-1">👷‍♀️ انتخاب کارگر:</label>
+    <select v-model="selectedWorker" class="border p-2 rounded w-full">
+      <option value="">-- انتخاب کنید --</option>
+      <option
+        v-for="worker in filteredWorkers"
+        :key="worker.uid"
+        :value="worker.uid"
       >
-        ✅ ثبت نهایی آمار
-      </button>
-    </div>
+        {{ worker.name }}
+      </option>
+    </select>
+    <button
+      @click="submitScan"
+      :disabled="!selectedWorker"
+      class="mt-2 bg-green-600 text-white px-4 py-2 rounded"
+    >
+      ✅ ثبت نهایی آمار
+    </button>
+  </div>
+
+  <div v-else-if="parsedQR.section === 'خروج از برش'" class="text-blue-600 text-sm mt-2">
+    📤 خروج از انبار برش و ورود به سالن دوخت
+    <button
+      @click="submitScan"
+      class="mt-2 bg-green-600 text-white px-4 py-2 rounded"
+    >
+      ✅ ثبت نهایی آمار
+    </button>
+  </div>
+
+  <div v-else-if="parsedQR.section === 'نهایی‌کار'" class="text-purple-600 text-sm mt-2">
+    ✅ خروج از سالن دوخت و ورود به انبار نهایی
+    <button
+      @click="submitScan"
+      class="mt-2 bg-green-600 text-white px-4 py-2 rounded"
+    >
+      ✅ ثبت نهایی آمار
+    </button>
+  </div>
+</div>
+
 
     <!-- انتخاب تاریخ -->
     <div class="my-4 text-center">
@@ -115,6 +137,12 @@ export default {
   mounted() {
     this.fetchWorkersList()
     this.fetchRecords()
+  
+  
+  this.workersList.push(
+  { uid: 'cutout-worker', name: '👷‍♂️ خروج از انبار برش' },
+  { uid: 'final-worker', name: '🏁 نهایی‌کار' }
+)
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       this.cameraError = true
@@ -160,7 +188,20 @@ export default {
       return this.filteredRecords.reduce((sum, item) => sum + (item.count || 0), 0)
     }
   },
-
+filteredWorkers() {
+  const section = this.parsedQR?.section
+  if (section === 'سالن دوخت') {
+    return this.workersList.filter(w => w.uid !== 'cutout-worker' && w.uid !== 'final-worker')
+  }
+  if (section === 'خروج از برش') {
+    return this.workersList.filter(w => w.uid === 'cutout-worker')
+  }
+  if (section === 'نهایی‌کار') {
+    return this.workersList.filter(w => w.uid === 'final-worker')
+  }
+  return []
+}
+,
   methods: {
 getWorkerName(uid) {
   const worker = this.workersList.find(w => w.uid === uid)
@@ -205,7 +246,7 @@ async parseQRAndSave(text) {
       const m = text.match(/قسمت: (.+?) - کد: (.+?) - تعداد: (\d+)/)
       if (m) {
         data = {
-          section: text.includes('برش') ? 'خروج از برش' : 'دوخت',
+          section: text.includes('برش') ? 'خروج از برش' : text.includes('دوخت') ? 'سالن دوخت' : '',
           part: m[1],
           code: m[2],
           count: +m[3]
@@ -235,45 +276,72 @@ async parseQRAndSave(text) {
 ,
 
 async submitScan() {
-  if (!this.parsedQR || !this.selectedWorker) return
+  if (!this.parsedQR) return
 
-  // آماده‌سازی رکورد با توجه به QR اسکن‌شده
-  const record = {
-    workerId: this.selectedWorker,
-    section: this.parsedQR.section,
-    part: this.parsedQR.part || null,
-    code: this.parsedQR.code,
-    count: this.parsedQR.count,
-    createdAt: Math.floor(Date.now() / 1000) // زمان به صورت timestamp
+  const timestamp = Math.floor(Date.now() / 1000)
+  const section = this.parsedQR.section
+  const part = this.parsedQR.part || null
+
+  let workerId = this.selectedWorker
+  if (section === 'خروج از برش') workerId = 'cutout-worker'
+  if (section === 'نهایی‌کار') workerId = 'final-worker'
+
+  if (section === 'سالن دوخت' && !workerId) {
+    alert('لطفاً یک کارگر انتخاب کنید')
+    return
   }
 
-  // اگر بخش "برش" بود یعنی خروج از انبار → اضافه کردن scanType
-  if (record.section === 'خروج از برش') {
-    record.scanType = 'exit_cut'
+  const record = {
+    workerId,
+    section,
+    part,
+    code: this.parsedQR.code,
+    count: this.parsedQR.count,
+    createdAt: timestamp
   }
 
   try {
-    const res = await fetch('https://app.paryamezon.ir/api/submit-scan.php', {
+    // ثبت در qr_stats
+    const resMain = await fetch('https://app.paryamezon.ir/api/submit-scan.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(record)
     })
 
-    const json = await res.json()
-    if (json.success) {
-      alert('✅ آمار ثبت شد')
-      this.scannedText = ''
-      this.selectedWorker = ''
-      this.parsedQR = null
-      await this.fetchRecords()
-    } else {
-      alert(json.message || '❌ خطا در ثبت آمار')
+    const jsonMain = await resMain.json()
+    if (!jsonMain.success) throw new Error(jsonMain.message || 'خطا در ثبت آمار اصلی')
+
+    // ثبت در مسیر اختصاصی
+    if (section === 'نهایی‌کار') {
+      const resFinal = await fetch('https://app.paryamezon.ir/api/submit-sewing-to-final.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: record.code,
+          count: record.count,
+          workerId,
+          createdAt: timestamp,
+          part
+        })
+      })
+
+      const jsonFinal = await resFinal.json()
+      if (!jsonFinal.success) throw new Error(jsonFinal.message || 'خطا در ثبت نهایی‌کار')
     }
+
+    alert('✅ آمار با موفقیت ثبت شد')
+    this.scannedText = ''
+    this.selectedWorker = ''
+    this.parsedQR = null
+    await this.fetchRecords()
+
   } catch (err) {
     console.error('❌ خطا در ثبت آمار:', err)
-    alert('❌ خطا در ارتباط با سرور')
+    alert('❌ خطا در ارتباط با سرور یا ثبت آمار')
   }
 }
+
+
 ,
 
     async downloadPDF() {

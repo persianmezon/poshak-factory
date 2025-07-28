@@ -54,6 +54,7 @@ const menuItems = [
   { name: 'انبار', path: '/warehouse', icon: WarehouseIcon, roles: ['admin'] },
   { name: 'ساخت QRCode', path: '/generate-qrcode', icon: QrCodeIcon, roles: ['admin'] },
   { name: 'اسکن QRCode', path: '/qrcode-scanner', icon: CameraIcon },
+  { path: '/cut-inventory', name: 'ثبت آمار برش', icon: WarehouseIcon, roles: ['admin'] },
   { name: 'مدیریت کارگرها', path: '/workers-management', icon: UsersIcon, roles: ['admin'] }
 ]
 

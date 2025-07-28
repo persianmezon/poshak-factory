@@ -8,19 +8,19 @@
       <label class="block mb-1">بخش اصلی:</label>
       <select v-model="mainSection" class="border p-2 rounded w-full">
         <option value="">انتخاب کنید...</option>
-        <option value="cut">برش</option>
-        <option value="sewing">سالن دوخت</option>
-        <option value="final">نهایی‌کار</option>
+<option value="cut">ورود به سالن دوخت</option>
+<option value="sewing">سالن دوخت</option>
+<option value="final">نهایی‌کار</option> 
       </select>
     </div>
 
     <!-- جزئیات برای بخش برش -->
     <div v-if="mainSection === 'cut'" class="mb-4">
-      <label class="block mb-1">بخش برش:</label>
+      <label class="block mb-1">نوع پارچه:</label>
       <select v-model="cutPart" class="border p-2 rounded w-full">
         <option value="">انتخاب کنید...</option>
-        <option value="آستین">آستین</option>
-        <option value="جلوی مانتو">جلوی مانتو</option>
+        <option value="آستر">آستر</option>
+        <option value="اصلی">اصلی</option>
       </select>
       <input v-model="code" placeholder="کد مانتو" class="border p-2 mt-2 rounded w-full" />
       <input v-model.number="count" type="number" placeholder="تعداد" class="border p-2 mt-2 rounded w-full" />
@@ -28,11 +28,12 @@
 
     <!-- جزئیات برای بخش دوخت -->
     <div v-if="mainSection === 'sewing'" class="mb-4">
-      <label class="block mb-1">بخش دوخت:</label>
+      <label class="block mb-1">مرحله:</label>
       <select v-model="sewingPart" class="border p-2 rounded w-full">
         <option value="">انتخاب کنید...</option>
         <option value="زیگزاگ">زیگزاگ</option>
         <option value="اتو">اتو</option>
+        <option value="دوخت">دوخت</option>
       </select>
       <input v-model="code" placeholder="کد مانتو" class="border p-2 mt-2 rounded w-full" />
       <input v-model.number="count" type="number" placeholder="تعداد" class="border p-2 mt-2 rounded w-full" />
@@ -82,45 +83,50 @@ export default {
     }
   },
   methods: {
-generateQR() {
-  let content = ''
-  let label = ''
-  if (this.mainSection === 'cut') {
-content = `بخش: خروج از برش - قسمت: ${this.cutPart} - کد: ${this.code} - تعداد: ${this.count}`
-label = `خروج از برش - ${this.cutPart} - ${this.code} - تعداد: ${this.count}`
-  } else if (this.mainSection === 'sewing') {
-    content = `بخش: دوخت - قسمت: ${this.sewingPart} - کد: ${this.code} - تعداد: ${this.count}`
-    label = `دوخت - ${this.sewingPart} - ${this.code} - تعداد: ${this.count}`
-  } else if (this.mainSection === 'final') {
-    content = `بخش: نهایی‌کار - کد کار: ${this.finalCode} - تعداد: ${this.count}`
-    label = `نهایی‌کار - ${this.finalCode} - تعداد: ${this.count}`
-  }
-  this.qrData = content
-  this.qrLabel = label
-  // ارسال به سرور
-fetch('https://app.paryamezon.ir/api/create-qrcode.php', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    section: this.mainSection,
-    part: this.mainSection === 'final' ? null : (this.mainSection === 'cut' ? this.cutPart : this.sewingPart),
-    code: this.mainSection === 'final' ? this.finalCode : this.code,
-    count: this.count
-  })
-})
-.then(res => res.json())
-.then(result => {
-  if (result.success) {
-    alert('✅ دسته با موفقیت ثبت شد.')
-  } else {
-    alert('❌ خطا: ' + result.message)
-  }
-})
-.catch(err => {
-  console.error('❌ خطا در ارسال به سرور:', err)
-  alert('⚠️ خطا در اتصال به سرور')
-})
+    generateQR() {
+      let content = ''
+      let label = ''
+
+      if (this.mainSection === 'cut') {
+        content = `بخش: خروج از برش - قسمت: ${this.cutPart} - کد: ${this.code} - تعداد: ${this.count}`
+        label = `خروج از برش - ${this.cutPart} - ${this.code} - تعداد: ${this.count}`
+      } else if (this.mainSection === 'sewing') {
+        content = `بخش: دوخت - قسمت: ${this.sewingPart} - کد: ${this.code} - تعداد: ${this.count}`
+        label = `دوخت - ${this.sewingPart} - ${this.code} - تعداد: ${this.count}`
+} else if (this.mainSection === 'final') {
+  this.code = this.finalCode
+  content = `بخش: نهایی‌کار - کد کار: ${this.code} - تعداد: ${this.count}`
+  label = `نهایی‌کار - ${this.code} - تعداد: ${this.count}`
 }
+
+
+      this.qrData = content
+      this.qrLabel = label
+
+      // ارسال به سرور برای ذخیره دسته
+      fetch('https://app.paryamezon.ir/api/create-qrcode.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          section: this.mainSection,
+          part: this.mainSection === 'cut' ? this.cutPart : (this.mainSection === 'sewing' ? this.sewingPart : null),
+          code: this.code,
+          count: this.count
+        })
+      })
+        .then(res => res.json())
+        .then(result => {
+          if (result.success) {
+            alert('✅ دسته با موفقیت ثبت شد.')
+          } else {
+            alert('❌ خطا: ' + result.message)
+          }
+        })
+        .catch(err => {
+          console.error('❌ خطا در ارسال به سرور:', err)
+          alert('⚠️ خطا در اتصال به سرور')
+        })
+    }
 ,
 printQRCode() {
   const canvas = this.$refs.qrCanvas // ❗ مستقیم به DOM اشاره داره

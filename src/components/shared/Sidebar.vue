@@ -49,6 +49,7 @@ const menuItems = [
   { path: '/workers-stats', label: 'آمار خیاط‌ها', icon: BarChartIcon, roles: ['admin']  },
   { path: '/warehouse', label: 'انبار', icon: WarehouseIcon, roles: ['admin']  },
   { path: '/generate-qrcode', label: 'ساخت QRCode', icon: QrCodeIcon, roles: ['admin'] },
+  { path: '/cut-inventory', label: 'ثبت آمار برش', icon: WarehouseIcon, roles: ['admin'] },
   { path: '/qrcode-scanner', label: 'اسکن QRCode', icon: CameraIcon },
   { path: '/workers-management', label: 'مدیریت کارگرها', icon: UsersIcon, roles: ['admin'] }
 ]

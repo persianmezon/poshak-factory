@@ -182,7 +182,7 @@ totalAllSections() {
     async loadAllData() {
       this.cutInventory = await this.fetchData('cut_inventory')
       this.cutToSewing = await this.fetchData('cut_to_sewing')
-      this.sewingToFinal = await this.fetchData('sewing_to_final')
+      this.sewingToFinal = await this.fetchData('final_inventory')
     },
 
     downloadExcel() {

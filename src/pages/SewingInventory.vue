@@ -67,9 +67,6 @@
 </template>
 
 <script>
-import { initializeApp } from "firebase/app"
-import { getDatabase, ref, get, child } from "firebase/database"
-import { firebaseConfig } from "@/firebase"
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 
@@ -119,53 +116,52 @@ export default {
         console.error('❌ خطا در واکشی کارگران:', err)
       }
     },
-    downloadExcel() {
-  const exportData = this.filteredRecordsByDate.map(item => ({
-    'قسمت': item.part || '',
-    'کد مانتو': item.code || '',
-    'تعداد': item.count || 0,
-    'نام کارگر': this.getWorkerName(item.workerId),
-    'تاریخ': item.createdAt
-      ? item.createdAt.toLocaleDateString('fa-IR')
-      : ''
-  }))
-
-  const worksheet = XLSX.utils.json_to_sheet(exportData)
-  const workbook = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'گزارش سالن دوخت')
-
-  const excelBuffer = XLSX.write(workbook, {
-    bookType: 'xlsx',
-    type: 'array'
-  })
-
-  const blob = new Blob([excelBuffer], {
-    type: 'application/octet-stream'
-  })
-
-  const today = new Date().toLocaleDateString('fa-IR').replace(/\//g, '-')
-  saveAs(blob, `گزارش-سالن-دوخت-${today}.xlsx`)
-},
 
     async fetchRecords() {
-      const app = initializeApp(firebaseConfig)
-      const db = getDatabase(app)
       try {
-        const snapshot = await get(child(ref(db), 'cut_to_sewing'))
-        const data = snapshot.val()
-        if (data) {
-          this.records = Object.entries(data).map(([id, item]) => ({
-            id,
+        const res = await fetch('https://app.paryamezon.ir/api/get-sewing.php?t=' + Date.now())
+        const json = await res.json()
+        if (json.success && Array.isArray(json.records)) {
+          this.records = json.records.map(item => ({
             ...item,
             createdAt: item.createdAt ? new Date(item.createdAt * 1000) : null
           }))
         }
       } catch (err) {
-        console.error('❌ خطا در واکشی آمار خروج از برش:', err)
+        console.error('❌ خطا در دریافت اطلاعات سالن دوخت:', err)
       }
+    },
+
+    downloadExcel() {
+      const exportData = this.filteredRecordsByDate.map(item => ({
+        'قسمت': item.part || '',
+        'کد مانتو': item.code || '',
+        'تعداد': item.count || 0,
+        'نام کارگر': this.getWorkerName(item.workerId),
+        'تاریخ': item.createdAt
+          ? item.createdAt.toLocaleDateString('fa-IR')
+          : ''
+      }))
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'گزارش سالن دوخت')
+
+      const excelBuffer = XLSX.write(workbook, {
+        bookType: 'xlsx',
+        type: 'array'
+      })
+
+      const blob = new Blob([excelBuffer], {
+        type: 'application/octet-stream'
+      })
+
+      const today = new Date().toLocaleDateString('fa-IR').replace(/\//g, '-')
+      saveAs(blob, `گزارش-سالن-دوخت-${today}.xlsx`)
     }
   },
 
+  // ✅ درست قرار گرفتن mounted خارج از methods
   async mounted() {
     await this.fetchWorkers()
     await this.fetchRecords()
